@@ -2,11 +2,13 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Metadata\ApiResource;
 use App\Repository\ClientRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ClientRepository::class)]
+#[ApiResource]
 class Client
 {
     #[ORM\Id]
@@ -14,26 +16,34 @@ class Client
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 32)]
     #[Assert\NotBlank]
-    #[Assert\Length(min:2)]
+    #[Assert\Length(min:2, max: 32)]
+    #[Assert\Regex(
+        pattern: '/^[a-z]+$/i',
+        htmlPattern: '^[a-zA-Z]+$'
+    )]
     private ?string $firstName = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 32)]
     #[Assert\NotBlank]
-    #[Assert\Length(min:2)]
+    #[Assert\Length(min:2, max: 32)]
+    #[Assert\Regex(
+        pattern: '/^[a-z]+$/i',
+        htmlPattern: '^[a-zA-Z]+$'
+    )]
     private ?string $lastName = null;
 
     #[ORM\Column(length: 255)]
     #[Assert\NotBlank]
     #[Assert\Email]
-    #[Assert\Unique]
+//    #[Assert\Unique]
     #[Assert\Length(min:8)]
     private ?string $email = null;
 
     #[ORM\Column(length: 255)]
     #[Assert\NotBlank]
-    #[Assert\Length(min:14)]
+    #[Assert\Length(min:12)]
     private ?string $phoneNumber = null;
 
     public function getId(): ?int
