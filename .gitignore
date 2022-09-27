@@ -7,7 +7,6 @@
 /public/bundles/
 /var/
 /vendor/
-.idea
 ###< symfony/framework-bundle ###
 
 ###> symfony/phpunit-bridge ###
@@ -188,3 +187,7 @@ fabric.properties
 /web/js/
 
 # End of https://www.toptal.com/developers/gitignore/api/phpstorm,symfony
+
+.idea/php.xml
+.idea/notifications.iml
+.idea/dataSources.xml
