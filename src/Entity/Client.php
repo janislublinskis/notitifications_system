@@ -5,9 +5,11 @@ namespace App\Entity;
 use ApiPlatform\Metadata\ApiResource;
 use App\Repository\ClientRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ClientRepository::class)]
+#[UniqueEntity('email')]
 #[ApiResource]
 class Client
 {
@@ -37,14 +39,12 @@ class Client
     #[ORM\Column(length: 255)]
     #[Assert\NotBlank]
     #[Assert\Email]
-//    #[Assert\Unique]
-    #[Assert\Length(min:8)]
     private ?string $email = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(type: 'integer', length: 255)]
     #[Assert\NotBlank]
     #[Assert\Length(min:12)]
-    private ?string $phoneNumber = null;
+    private ?int $phoneNumber = null;
 
     public function getId(): ?int
     {
@@ -89,7 +89,7 @@ class Client
 
     public function getPhoneNumber(): ?string
     {
-        return $this->phoneNumber;
+        return '+' . $this->phoneNumber;
     }
 
     public function setPhoneNumber(string $phoneNumber): self
