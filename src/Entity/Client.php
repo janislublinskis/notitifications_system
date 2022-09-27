@@ -6,44 +6,55 @@ use ApiPlatform\Metadata\ApiResource;
 use App\Repository\ClientRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
+use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ClientRepository::class)]
 #[UniqueEntity('email')]
-#[ApiResource]
+#[ApiResource(
+    normalizationContext: ['groups' => ['client.read']],
+    denormalizationContext: ['groups' => ['client.write']],
+    paginationClientEnabled: true,
+    paginationItemsPerPage: 5
+)]
 class Client
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['client.read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 32)]
     #[Assert\NotBlank]
-    #[Assert\Length(min:2, max: 32)]
+    #[Assert\Length(min: 2, max: 32)]
     #[Assert\Regex(
         pattern: '/^[a-z]+$/i',
         htmlPattern: '^[a-zA-Z]+$'
     )]
+    #[Groups(['client.read', 'client.write'])]
     private ?string $firstName = null;
 
     #[ORM\Column(length: 32)]
     #[Assert\NotBlank]
-    #[Assert\Length(min:2, max: 32)]
+    #[Assert\Length(min: 2, max: 32)]
     #[Assert\Regex(
         pattern: '/^[a-z]+$/i',
         htmlPattern: '^[a-zA-Z]+$'
     )]
+    #[Groups(['client.read', 'client.write'])]
     private ?string $lastName = null;
 
     #[ORM\Column(length: 255)]
     #[Assert\NotBlank]
     #[Assert\Email]
+    #[Groups(['client.read', 'client.write'])]
     private ?string $email = null;
 
     #[ORM\Column(type: 'integer', length: 255)]
     #[Assert\NotBlank]
-    #[Assert\Length(min:12)]
+    #[Assert\Length(min: 12)]
+    #[Groups(['client.read', 'client.write'])]
     private ?int $phoneNumber = null;
 
     public function getId(): ?int
