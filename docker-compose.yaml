@@ -13,7 +13,7 @@ services:
             # For example, to allow the host to connect to port 3306 on the container, you would change
             # "3306" to "3306:3306". Where the first port is exposed to the host and the second is the container port.
             # See https://docs.docker.com/compose/compose-file/compose-file-v3/#ports for more information.
-            - '5432'
+            - '5444:5432'
 
     php:
         build:
@@ -45,6 +45,15 @@ services:
             - ./public:/app/public:ro
         ports:
             - "8081:81"
+
+    mailhog:
+        image: mailhog/mailhog
+        restart: always
+        logging:
+            driver: "none"
+        ports:
+            - "8025:8025"
+            - "1025:1025"
 
 volumes:
     db-data:
