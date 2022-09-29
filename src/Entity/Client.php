@@ -5,6 +5,7 @@ namespace App\Entity;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use App\Repository\ClientRepository;
@@ -20,6 +21,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new Get(),
+        new GetCollection(),
         new Post(),
         new Patch(),
         new Delete(),
@@ -27,7 +29,7 @@ use Symfony\Component\Validator\Constraints as Assert;
     normalizationContext: ['groups' => ['client.read']],
     denormalizationContext: ['groups' => ['client.write']],
     paginationClientEnabled: true,
-    paginationItemsPerPage: 5
+    paginationItemsPerPage: 5,
 )]
 class Client
 {
@@ -120,8 +122,7 @@ class Client
 
     public function getPhoneNumber(): ?string
     {
-//        return '+' . $this->phoneNumber;
-        return $this->phoneNumber;
+        return '+' . $this->phoneNumber;
     }
 
     public function setPhoneNumber(string $phoneNumber): self

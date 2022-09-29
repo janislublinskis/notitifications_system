@@ -25,7 +25,8 @@ use Symfony\Component\Validator\Constraints as Assert;
     normalizationContext: ['groups' => ['notification.read']],
     denormalizationContext: ['groups' => ['notification.write']],
     paginationClientEnabled: true,
-    paginationItemsPerPage: 5
+    paginationItemsPerPage: 5,
+    security: "is_granted('ROLE_USER')"
 )]
 #[ApiFilter(SearchFilter::class, properties: ['clientId' => 'exact'])]
 #[CustomAssert\NotificationContentLength]
@@ -43,11 +44,13 @@ class Notification
     private ?Client $clientId = null;
 
     #[ORM\Column(length: 255)]
+    #[Assert\NotBlank]
     #[Assert\Choice(['sms', 'email'])]
     #[Groups(['notification.read', 'notification.write'])]
     private ?string $channel = null;
 
     #[ORM\Column(type: Types::TEXT)]
+    #[Assert\NotBlank]
     #[Groups(['notification.read', 'notification.write'])]
     private ?string $content = null;
 

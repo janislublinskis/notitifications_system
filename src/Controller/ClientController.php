@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Client;
 use App\Repository\ClientRepository;
 use Doctrine\DBAL\Exception;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -27,6 +28,7 @@ class ClientController extends AbstractController
         $this->serializer = $serializer;
     }
 
+    #[IsGranted('ROLE_USER')]
     #[Route('/', name: 'client.index', methods: ['GET'])]
     public function index(): JsonResponse
     {
