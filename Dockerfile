@@ -5,11 +5,16 @@ FROM php:${PHP_VERSION}-fpm-alpine AS app_php
 
 ARG WORKDIR=/app
 
+ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
+
+RUN chmod +x /usr/local/bin/install-php-extensions && sync && \
+    install-php-extensions amqp \
+
 RUN docker-php-source extract \
     && apk add --update --virtual .build-deps autoconf g++ make pcre-dev icu-dev openssl-dev libxml2-dev libmcrypt-dev git libpng-dev rabbitmq-c rabbitmq-c-dev\
 # Install pgsql goodness
     && apk add postgresql-dev \
-    && docker-php-ext-install pgsql pdo_pgsql librabbitmq-dev librabbitmq0 php-amqp\
+    && docker-php-ext-install pgsql pdo_pgsql \
     && apk del postgresql-libs libsasl db \
 # Instaling pecl modules
 	&& pecl install apcu xdebug \
