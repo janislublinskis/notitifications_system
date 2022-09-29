@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\Agent;
+use App\Entity\ApiToken;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\Security\Core\Exception\UnsupportedUserException;

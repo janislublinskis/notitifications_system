@@ -11,6 +11,7 @@ use ApiPlatform\Metadata\Post;
 use App\Repository\ClientRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Serializer\Annotation\Groups;
@@ -21,7 +22,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new Get(),
-        new GetCollection(),
+        new GetCollection(security: "is_granted('ROLE_USER')"),
         new Post(),
         new Patch(),
         new Delete(),
@@ -34,42 +35,44 @@ use Symfony\Component\Validator\Constraints as Assert;
 class Client
 {
     #[ORM\Id]
-    #[ORM\GeneratedValue]
+    #[ORM\GeneratedValue(strategy: 'AUTO')]
     #[ORM\Column]
-    #[Groups(['client.read'])]
     private ?int $id = null;
 
-    #[ORM\Column(length: 32)]
+    #[ORM\Column(type: Types::STRING, length: 32)]
     #[Assert\NotBlank]
     #[Assert\Length(min: 2, max: 32)]
     #[Assert\Regex(
         pattern: '/^[a-z]+$/i',
         htmlPattern: '^[a-zA-Z]+$'
     )]
+    #[Assert\Type(type: ['alpha'])]
     #[Groups(['client.read', 'client.write'])]
     private ?string $firstName = null;
 
-    #[ORM\Column(length: 32)]
+    #[ORM\Column(type: Types::STRING, length: 32)]
     #[Assert\NotBlank]
     #[Assert\Length(min: 2, max: 32)]
     #[Assert\Regex(
         pattern: '/^[a-z]+$/i',
         htmlPattern: '^[a-zA-Z]+$'
     )]
+    #[Assert\Type(type: ['alpha'])]
     #[Groups(['client.read', 'client.write'])]
     private ?string $lastName = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(type: Types::STRING, length: 255)]
     #[Assert\NotBlank]
     #[Assert\Email]
     #[Groups(['client.read', 'client.write'])]
     private ?string $email = null;
 
-    #[ORM\Column(type: 'bigint')]
+    #[ORM\Column(type: Types::STRING)]
     #[Assert\NotBlank]
-    #[Assert\Length(min: 12)]
+    #[Assert\Length(min: 12, max: 18)]
+    #[Assert\Type(type: ['digit'])]
     #[Groups(['client.read', 'client.write'])]
-    private ?int $phoneNumber = null;
+    private ?string $phoneNumber = null;
 
     #[ORM\OneToMany(mappedBy: 'clientId', targetEntity: Notification::class, orphanRemoval: true)]
     private Collection $notifications;

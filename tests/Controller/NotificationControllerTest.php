@@ -3,121 +3,138 @@
 namespace App\Tests\Controller;
 
 use App\Entity\Notification;
-use App\Repository\NotificationRepository;
-use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use App\Tests\Factory\AgentFactory;
+use App\Tests\Factory\ApiTokenFactory;
+use App\Tests\Factory\ClientFactory;
+use App\Tests\Factory\NotificationFactory;
 
-class NotificationControllerTest extends WebTestCase
+class NotificationControllerTest extends BaseTest
 {
-    private KernelBrowser $client;
-    private NotificationRepository $repository;
-    private string $path = '/notification/';
-
-    protected function setUp(): void
+    public function setUp(): void
     {
-        $this->client = static::createClient();
-        $this->repository = static::getContainer()->get('doctrine')->getRepository(Notification::class);
+        parent::setUp();
+        $this->path = '/api/notifications';
+        $this->repository = $this->entityManager->getRepository(Notification::class);
+        $this->headers = [
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+            'x-api-token' => ApiTokenFactory::createOne(['agent' => AgentFactory::createOne()])->getToken()
+        ];
+    }
 
-        foreach ($this->repository->findAll() as $object) {
-            $this->repository->remove($object, true);
-        }
+    public function testIndexUnauthorized(): void
+    {
+        static::createClient()->request('GET', $this->path);
+        $this->assertResponseStatusCodeSame(401);
     }
 
     public function testIndex(): void
     {
-        $crawler = $this->client->request('GET', $this->path);
+        $numberOfEntities = 25;
 
-        self::assertResponseStatusCodeSame(200);
-        self::assertPageTitleContains('Notification index');
+        NotificationFactory::createMany($numberOfEntities, function () {
+            return [
+                'clientId' => ClientFactory::createOne()
+            ];
+        });
 
-        // Use the $crawler to perform additional assertions e.g.
-        // self::assertSame('Some text on the page', $crawler->filter('.p')->first());
-    }
-
-    public function testNew(): void
-    {
-        $originalNumObjectsInRepository = count($this->repository->findAll());
-
-        $this->markTestIncomplete();
-        $this->client->request('GET', sprintf('%snew', $this->path));
-
-        self::assertResponseStatusCodeSame(200);
-
-        $this->client->submitForm('Save', [
-            'notification[channel]' => 'Testing',
-            'notification[content]' => 'Testing',
-            'notification[clientId]' => 'Testing',
+        static::createClient()->request('GET', $this->path, [
+            'headers' => $this->headers
         ]);
 
-        self::assertResponseRedirects('/notification/');
-
-        self::assertSame($originalNumObjectsInRepository + 1, count($this->repository->findAll()));
+        $this->assertResponseIsSuccessful();
+        $this->assertResponseStatusCodeSame(200);
+        $this->assertCount($numberOfEntities, $this->repository->findAll());
     }
 
-    public function testShow(): void
+    public function testCreateUnauthorized(): void
     {
-        $this->markTestIncomplete();
-        $fixture = new Notification();
-        $fixture->setChannel('My Title');
-        $fixture->setContent('My Title');
-        $fixture->setClientId('My Title');
-
-        $this->repository->add($fixture, true);
-
-        $this->client->request('GET', sprintf('%s%s', $this->path, $fixture->getId()));
-
-        self::assertResponseStatusCodeSame(200);
-        self::assertPageTitleContains('Notification');
-
-        // Use assertions to check that the properties are properly displayed.
+        static::createClient()->request('POST', $this->path);
+        $this->assertResponseStatusCodeSame(401);
     }
 
-    public function testEdit(): void
+    public function testCreateEmail()
     {
-        $this->markTestIncomplete();
-        $fixture = new Notification();
-        $fixture->setChannel('My Title');
-        $fixture->setContent('My Title');
-        $fixture->setClientId('My Title');
+        $client = ClientFactory::createOne();
 
-        $this->repository->add($fixture, true);
-
-        $this->client->request('GET', sprintf('%s%s/edit', $this->path, $fixture->getId()));
-
-        $this->client->submitForm('Update', [
-            'notification[channel]' => 'Something New',
-            'notification[content]' => 'Something New',
-            'notification[clientId]' => 'Something New',
+        $notificationDataArray = json_encode([
+            'clientId' => 'api/clients/' . $client->getId(),
+            'channel' => 'email',
+            'content' => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut
+                labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+                aliquip ex ea commodo consequat.'
         ]);
 
-        self::assertResponseRedirects('/notification/');
+        static::createClient()->request('POST', $this->path, [
+            'body' => $notificationDataArray,
+            'headers' => $this->headers
+        ]);
 
-        $fixture = $this->repository->findAll();
-
-        self::assertSame('Something New', $fixture[0]->getChannel());
-        self::assertSame('Something New', $fixture[0]->getContent());
-        self::assertSame('Something New', $fixture[0]->getClientId());
+        $this->assertResponseIsSuccessful();
+        $this->assertCount(1, $this->repository->findAll());
+        $this->assertJson($notificationDataArray);
     }
 
-    public function testRemove(): void
+    public function testCreateSMS()
     {
-        $this->markTestIncomplete();
+        $client = ClientFactory::createOne();
 
-        $originalNumObjectsInRepository = count($this->repository->findAll());
+        $notificationDataArray = json_encode([
+            'clientId' => 'api/clients/' . $client->getId(),
+            'channel' => 'sms',
+            'content' => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut
+                labore et dolores magna aliqua.' //precisely 140 characters long
+        ]);
 
-        $fixture = new Notification();
-        $fixture->setChannel('My Title');
-        $fixture->setContent('My Title');
-        $fixture->setClientId('My Title');
+        static::createClient()->request('POST', $this->path, [
+            'body' => $notificationDataArray,
+            'headers' => $this->headers
+        ]);
 
-        $this->repository->add($fixture, true);
+        $this->assertResponseIsSuccessful();
+        $this->assertCount(1, $this->repository->findAll());
+        $this->assertJson($notificationDataArray);
+    }
 
-        self::assertSame($originalNumObjectsInRepository + 1, count($this->repository->findAll()));
+    public function testCreateSMSWithLongContent()
+    {
+        $client = ClientFactory::createOne();
 
-        $this->client->request('GET', sprintf('%s%s', $this->path, $fixture->getId()));
-        $this->client->submitForm('Delete');
+        $notificationDataArray = json_encode([
+            'clientId' => 'api/clients/' . $client->getId(),
+            'channel' => 'sms',
+            'content' => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut
+                labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+                aliquip ex ea commodo consequat.'
+        ]);
 
-        self::assertSame($originalNumObjectsInRepository, count($this->repository->findAll()));
-        self::assertResponseRedirects('/notification/');
+        static::createClient()->request('POST', $this->path, [
+            'body' => $notificationDataArray,
+            'headers' => $this->headers
+        ]);
+
+        $this->assertResponseIsUnprocessable();
+        $this->assertResponseStatusCodeSame(422);
+        $this->assertCount(0, $this->repository->findAll());
+    }
+
+    public function testShowUnauthorized(): void
+    {
+        $notification = NotificationFactory::createOne(['clientId' => ClientFactory::createOne()]);
+
+        static::createClient()->request('GET', $this->path . '/' . $notification->getId());
+        $this->assertResponseStatusCodeSame(401);
+    }
+
+    public function testShow()
+    {
+        $notification = NotificationFactory::createOne(['clientId' => ClientFactory::createOne()]);
+
+        static::createClient()->request('GET', $this->path . '/' . $notification->getId(), [
+            'headers' => $this->headers
+        ]);
+
+        $this->assertResponseIsSuccessful();
+        $this->assertJson(json_encode($notification));
     }
 }

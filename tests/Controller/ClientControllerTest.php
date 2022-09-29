@@ -3,127 +3,125 @@
 namespace App\Tests\Controller;
 
 use App\Entity\Client;
-use App\Repository\ClientRepository;
-use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use App\Tests\Factory\AgentFactory;
+use App\Tests\Factory\ApiTokenFactory;
+use App\Tests\Factory\ClientFactory;
 
-class ClientControllerTest extends WebTestCase
+class ClientControllerTest extends BaseTest
 {
-    private KernelBrowser $client;
-    private ClientRepository $repository;
-    private string $path = '/client/';
-
-    protected function setUp(): void
+    public function setUp(): void
     {
-        $this->client = static::createClient();
-        $this->repository = static::getContainer()->get('doctrine')->getRepository(Client::class);
+        parent::setUp();
+        $this->path = '/api/clients';
+        $this->repository = $this->entityManager->getRepository(Client::class);
+    }
 
-        foreach ($this->repository->findAll() as $object) {
-            $this->repository->remove($object, true);
-        }
+    public function testIndexUnauthorized(): void
+    {
+        static::createClient()->request('GET', $this->path);
+        $this->assertResponseStatusCodeSame(401);
     }
 
     public function testIndex(): void
     {
-        $crawler = $this->client->request('GET', $this->path);
+        $agent = AgentFactory::createOne();
+        $apiToken = ApiTokenFactory::createOne(['agent' => $agent]);
+        $numberOfEntities = 5;
+        ClientFactory::createMany($numberOfEntities);
 
-        self::assertResponseStatusCodeSame(200);
-        self::assertPageTitleContains('Client index');
-
-        // Use the $crawler to perform additional assertions e.g.
-        // self::assertSame('Some text on the page', $crawler->filter('.p')->first());
-    }
-
-    public function testNew(): void
-    {
-        $originalNumObjectsInRepository = count($this->repository->findAll());
-
-        $this->markTestIncomplete();
-        $this->client->request('GET', sprintf('%snew', $this->path));
-
-        self::assertResponseStatusCodeSame(200);
-
-        $this->client->submitForm('Save', [
-            'client[firstName]' => 'Testing',
-            'client[lastName]' => 'Testing',
-            'client[email]' => 'Testing',
-            'client[phoneNumber]' => 'Testing',
+        static::createClient()->request('GET', $this->path, [
+            'headers' => [
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+                'x-api-token' => $apiToken->getToken()
+            ]
         ]);
 
-        self::assertResponseRedirects('/client/');
-
-        self::assertSame($originalNumObjectsInRepository + 1, count($this->repository->findAll()));
+        $this->assertResponseIsSuccessful();
+        $this->assertResponseStatusCodeSame(200);
+        $this->assertCount($numberOfEntities, $this->repository->findAll());
     }
 
-    public function testShow(): void
+    public function testCreate()
     {
-        $this->markTestIncomplete();
-        $fixture = new Client();
-        $fixture->setFirstName('My Title');
-        $fixture->setLastName('My Title');
-        $fixture->setEmail('My Title');
-        $fixture->setPhoneNumber('My Title');
-
-        $this->repository->add($fixture, true);
-
-        $this->client->request('GET', sprintf('%s%s', $this->path, $fixture->getId()));
-
-        self::assertResponseStatusCodeSame(200);
-        self::assertPageTitleContains('Client');
-
-        // Use assertions to check that the properties are properly displayed.
-    }
-
-    public function testEdit(): void
-    {
-        $this->markTestIncomplete();
-        $fixture = new Client();
-        $fixture->setFirstName('My Title');
-        $fixture->setLastName('My Title');
-        $fixture->setEmail('My Title');
-        $fixture->setPhoneNumber('My Title');
-
-        $this->repository->add($fixture, true);
-
-        $this->client->request('GET', sprintf('%s%s/edit', $this->path, $fixture->getId()));
-
-        $this->client->submitForm('Update', [
-            'client[firstName]' => 'Something New',
-            'client[lastName]' => 'Something New',
-            'client[email]' => 'Something New',
-            'client[phoneNumber]' => 'Something New',
+        $dataArray = json_encode([
+            'firstName' => 'Testing',
+            'lastName' => 'Phase',
+            'email' => 'testing.phase@email.com',
+            'phoneNumber' => "12345678901011"
         ]);
 
-        self::assertResponseRedirects('/client/');
+        static::createClient()->request('POST', $this->path, [
+            'body' => $dataArray,
+            'headers' => [
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json'
+            ]
+        ]);
 
-        $fixture = $this->repository->findAll();
-
-        self::assertSame('Something New', $fixture[0]->getFirstName());
-        self::assertSame('Something New', $fixture[0]->getLastName());
-        self::assertSame('Something New', $fixture[0]->getEmail());
-        self::assertSame('Something New', $fixture[0]->getPhoneNumber());
+        $this->assertResponseIsSuccessful();
+        $this->assertCount(1, $this->repository->findAll());
+        $this->assertJson($dataArray);
     }
 
-    public function testRemove(): void
+    public function testShow()
     {
-        $this->markTestIncomplete();
+        $client = ClientFactory::createOne();
 
-        $originalNumObjectsInRepository = count($this->repository->findAll());
+        static::createClient()->request('GET', $this->path . '/' . $client->getId(), [
+            'headers' => [
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json'
+            ]
+        ]);
 
-        $fixture = new Client();
-        $fixture->setFirstName('My Title');
-        $fixture->setLastName('My Title');
-        $fixture->setEmail('My Title');
-        $fixture->setPhoneNumber('My Title');
+        $this->assertResponseIsSuccessful();
+        $this->assertJson(json_encode($client));
+    }
 
-        $this->repository->add($fixture, true);
+    public function testEdit()
+    {
+        $client = ClientFactory::createOne([
+            'firstName' => 'NotTesting',
+            'lastName' => 'NotPhase',
+            'email' => 'not.testing.phase@email.com',
+            'phoneNumber' => "11010987654321"
+        ]);
 
-        self::assertSame($originalNumObjectsInRepository + 1, count($this->repository->findAll()));
+        $dataArray = json_encode([
+            'firstName' => 'Testing',
+            'lastName' => 'Phase',
+            'email' => 'testing.phase@email.com',
+            'phoneNumber' => "12345678901011"
+        ]);
 
-        $this->client->request('GET', sprintf('%s%s', $this->path, $fixture->getId()));
-        $this->client->submitForm('Delete');
+        static::createClient()->request('PATCH', $this->path . '/' . $client->getId(), [
+            'body' => $dataArray,
+            'headers' => [
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/merge-patch+json'
+            ]
+        ]);
 
-        self::assertSame($originalNumObjectsInRepository, count($this->repository->findAll()));
-        self::assertResponseRedirects('/client/');
+        $this->assertResponseIsSuccessful();
+        $this->assertJson($dataArray);
+    }
+
+    public function testDelete()
+    {
+        $client = ClientFactory::createOne();
+
+        $this->assertCount(1, $this->repository->findAll());
+
+        static::createClient()->request('DELETE', $this->path . '/' . $client->getId(), [
+            'headers' => [
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json'
+            ]
+        ]);
+
+        $this->assertResponseIsSuccessful();
+        $this->assertCount(0, $this->repository->findAll());
+        $this->assertResponseStatusCodeSame(204);
     }
 }

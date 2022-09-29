@@ -3,8 +3,9 @@
 namespace App\Entity;
 
 use App\Repository\ApiTokenRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Validator\Constraints\Unique;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ApiTokenRepository::class)]
 class ApiToken
@@ -14,7 +15,7 @@ class ApiToken
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(type: Types::STRING, length: 255)]
     #[Assert\NotBlank]
     #[Assert\Unique]
     private ?string $token = null;
