@@ -7,6 +7,7 @@ use App\Tests\Factory\AgentFactory;
 use App\Tests\Factory\ApiTokenFactory;
 use App\Tests\Factory\ClientFactory;
 use App\Tests\Factory\NotificationFactory;
+use Symfony\Component\Mailer\MailerInterface;
 
 class NotificationControllerTest extends BaseTest
 {
@@ -55,6 +56,11 @@ class NotificationControllerTest extends BaseTest
 
     public function testCreateEmail()
     {
+        //@TODO: Finish email sending cases
+//        $symfonyMailer = $this->createMock(MailerInterface::class);
+//        $symfonyMailer->expects($this->once())
+//            ->method('send');
+
         $client = ClientFactory::createOne();
 
         $notificationDataArray = json_encode([
@@ -75,8 +81,48 @@ class NotificationControllerTest extends BaseTest
         $this->assertJson($notificationDataArray);
     }
 
+    public function testCreateEmailMultiple()
+    {
+        //@TODO: fix test bug
+        $this->markTestIncomplete();
+        $numberOfEntities = random_int(1, 5);
+
+        //@TODO: Finish email sending cases
+//        $symfonyMailer = $this->createMock(MailerInterface::class);
+//        $symfonyMailer->expects($this->exactly($numberOfEntities))
+//            ->method('send');
+
+        $client = ClientFactory::createOne();
+
+        $notificationDataArray = [
+            'clientId' => 'api/clients/' . $client->getId(),
+            'channel' => 'email',
+            'content' => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut
+                labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+                aliquip ex ea commodo consequat.'
+        ];
+
+        for ($i = 0; $i < $numberOfEntities; $i++) {
+            $notificationsDataArray[] = $notificationDataArray;
+        }
+
+        static::createClient()->request('POST', $this->path, [
+            'body' => json_encode($notificationsDataArray),
+            'headers' => $this->headers
+        ]);
+
+        $this->assertResponseIsSuccessful();
+        $this->assertCount($numberOfEntities, $this->repository->findAll());
+        $this->assertJson(json_encode($notificationsDataArray));
+    }
+
     public function testCreateSMS()
     {
+        //@TODO: Finish email sending cases
+//        $symfonyMailer = $this->createMock(MailerInterface::class);
+//        $symfonyMailer->expects($this->once())
+//            ->method('send');
+
         $client = ClientFactory::createOne();
 
         $notificationDataArray = json_encode([
