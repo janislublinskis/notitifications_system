@@ -6,10 +6,10 @@ FROM php:${PHP_VERSION}-fpm-alpine AS app_php
 ARG WORKDIR=/app
 
 RUN docker-php-source extract \
-    && apk add --update --virtual .build-deps autoconf g++ make pcre-dev icu-dev openssl-dev libxml2-dev libmcrypt-dev git libpng-dev \
+    && apk add --update --virtual .build-deps autoconf g++ make pcre-dev icu-dev openssl-dev libxml2-dev libmcrypt-dev git libpng-dev rabbitmq-c rabbitmq-c-dev\
 # Install pgsql goodness
     && apk add postgresql-dev \
-    && docker-php-ext-install pgsql pdo_pgsql \
+    && docker-php-ext-install pgsql pdo_pgsql librabbitmq-dev librabbitmq0 php-amqp\
     && apk del postgresql-libs libsasl db \
 # Instaling pecl modules
 	&& pecl install apcu xdebug \
@@ -30,7 +30,9 @@ RUN docker-php-source extract \
     && docker-php-source delete \
     && apk del --purge .build-deps \
     && rm -rf /tmp/pear \
-    && rm -rf /var/cache/apk/*
+    && rm -rf /var/cache/apk/* \
+    && pecl install amqp \
+    && docker-php-ext-enable amqp
 
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 COPY docker/php/php.ini $PHP_INI_DIR/conf.d/php.ini
