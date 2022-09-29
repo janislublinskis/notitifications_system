@@ -3,7 +3,6 @@
 namespace App\Controller;
 
 use App\Entity\Client;
-use App\Form\ClientType;
 use App\Repository\ClientRepository;
 use Doctrine\DBAL\Exception;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -29,11 +28,12 @@ class ClientController extends AbstractController
     }
 
     #[Route('/', name: 'client.index', methods: ['GET'])]
-    public function index(): Response
+    public function index(): JsonResponse
     {
-        return $this->render('client/index.html.twig', [
-            'clients' => $this->clientRepository->findAll(),
-        ]);
+        return new JsonResponse(
+            $this->serializer->serialize($this->clientRepository->findAll(), 'json'),
+            Response::HTTP_OK
+        );
     }
 
     #[Route('/create', name: 'client.create', methods: 'POST')]
@@ -57,39 +57,50 @@ class ClientController extends AbstractController
         }
     }
 
-    #[Route('/{id}', name: 'client.show', methods: ['GET'])]
+    #[Route('/{id}', name: 'client.show', methods: 'GET')]
     public function show(Client $client): Response
     {
-        return $this->render('client/show.html.twig', [
-            'client' => $client,
-        ]);
+        return new JsonResponse(
+            $this->serializer->serialize($client, 'json'),
+            Response::HTTP_OK
+        );
     }
 
-    #[Route('/{id}/edit', name: 'client.edit', methods: ['GET', 'POST'])]
-    public function edit(Request $request, Client $client): Response
+    #[Route('/{id}/edit', name: 'client.edit', methods: 'POST')]
+    public function edit(Client $client): JsonResponse
     {
-        $form = $this->createForm(ClientType::class, $client);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
+        try {
             $this->clientRepository->save($client, true);
 
-            return $this->redirectToRoute('client.index', [], Response::HTTP_SEE_OTHER);
+            return new JsonResponse(
+                $this->serializer->serialize($client, 'json'),
+                Response::HTTP_OK
+            );
+        } catch (Exception $e) {
+            //@TODO: add loger
+            return new JsonResponse(
+                $e->getMessage(),
+                Response::HTTP_BAD_REQUEST
+            );
         }
-
-        return $this->renderForm('client/edit.html.twig', [
-            'client' => $client,
-            'form' => $form,
-        ]);
     }
 
-    #[Route('/{id}', name: 'client.delete', methods: ['POST'])]
-    public function delete(Request $request, Client $client): Response
+    #[Route('/{id}', name: 'client.delete', methods: 'POST')]
+    public function delete(Client $client): JsonResponse
     {
-        if ($this->isCsrfTokenValid('delete' . $client->getId(), $request->request->get('_token'))) {
+        try {
             $this->clientRepository->remove($client, true);
-        }
 
-        return $this->redirectToRoute('client.index', [], Response::HTTP_SEE_OTHER);
+            return new JsonResponse(
+                'Client removed.',
+                Response::HTTP_NO_CONTENT
+            );
+        } catch (Exception $e) {
+            //@TODO: add loger
+            return new JsonResponse(
+                $e->getMessage(),
+                Response::HTTP_BAD_REQUEST
+            );
+        }
     }
 }

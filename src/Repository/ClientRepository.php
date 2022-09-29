@@ -26,13 +26,7 @@ class ClientRepository extends ServiceEntityRepository
         $this->getEntityManager()->persist($entity);
 
         if ($flush) {
-            try {
-                var_dump(1123);
-                $this->getEntityManager()->flush();
-            } catch (\Exception $error) {
-                dd($error);
-            }
-//            $this->getEntityManager()->flush();
+            $this->getEntityManager()->flush();
         }
     }
 

@@ -55,6 +55,12 @@ services:
             - "8025:8025"
             - "1025:1025"
 
+    rabbitmq:
+        image: rabbitmq:3.7-management
+        ports:
+            - "5672:5672"
+            - "15672:15672"
+
 volumes:
     db-data:
     var:

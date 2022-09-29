@@ -3,40 +3,42 @@
 namespace App\Controller;
 
 use App\Entity\Notification;
-use App\Form\NotificationType;
+use App\Message\SendEmailNotification;
 use App\Repository\NotificationRepository;
-use App\Service\SendNotificationService;
 use Doctrine\DBAL\Exception;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Messenger\Bridge\Amqp\Transport\AmqpStamp;
+use Symfony\Component\Messenger\Envelope;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Serializer\SerializerInterface;
 
 #[Route('/notification')]
 class NotificationController extends AbstractController
 {
-    private SendNotificationService $notificationService;
     private SerializerInterface $serializer;
     private NotificationRepository $notificationRepository;
+    private MessageBusInterface $bus;
 
     public function __construct(
-        NotificationRepository  $notificationRepository,
-        SendNotificationService $notificationService,
-        SerializerInterface     $serializer
+        NotificationRepository $notificationRepository,
+        SerializerInterface    $serializer,
+        MessageBusInterface    $bus
     )
     {
         $this->notificationRepository = $notificationRepository;
-        $this->notificationService = $notificationService;
         $this->serializer = $serializer;
+        $this->bus = $bus;
     }
 
     #[Route('/', name: 'notification.index', methods: ['GET'])]
-    public function index(NotificationRepository $notificationRepository): JsonResponse
+    public function index(): JsonResponse
     {
         return new JsonResponse(
-            $this->serializer->serialize($notificationRepository->findAll(), 'json'),
+            $this->serializer->serialize($this->notificationRepository->findAll(), 'json'),
             Response::HTTP_OK
         );
     }
@@ -45,12 +47,20 @@ class NotificationController extends AbstractController
     public function create(Request $request): Response
     {
         try {
-            $notification = $this->serializer->deserialize($request->getContent(), Notification::class . '[]', 'json');
-            $this->notificationService->send($notification);
-            $this->notificationRepository->save($notification, true);
+            $notifications = $this->serializer->deserialize(
+                $request->getContent(), Notification::class . '[]', 'json'
+            );
+
+            foreach ($notifications as $notification) {
+                $email = new SendEmailNotification($notification->getClientId()->getEmail(), $notification->getContent());
+                $envelope = new Envelope($email, [new AmqpStamp('normal')]);
+                $this->bus->dispatch($envelope);
+
+                $this->notificationRepository->save($notification, true);
+            }
 
             return new JsonResponse(
-                $this->serializer->serialize($notification, 'json'),
+                $this->serializer->serialize($notifications, 'json'),
                 Response::HTTP_CREATED
             );
         } catch (Exception $e) {
@@ -62,39 +72,50 @@ class NotificationController extends AbstractController
         }
     }
 
-    #[Route('/{id}', name: 'notification.show', methods: ['GET'])]
+    #[Route('/{id}', name: 'notification.show', methods: 'GET')]
     public function show(Notification $notification): Response
     {
-        return $this->render('notification/show.html.twig', [
-            'notification' => $notification,
-        ]);
+        return new JsonResponse(
+            $this->serializer->serialize($notification, 'json'),
+            Response::HTTP_OK
+        );
     }
 
     #[Route('/{id}/edit', name: 'notification.edit', methods: 'POST')]
-    public function edit(Request $request, Notification $notification, NotificationRepository $notificationRepository): Response
+    public function edit(Notification $notification): Response
     {
-        $form = $this->createForm(NotificationType::class, $notification);
-        $form->handleRequest($request);
+        try {
+            $this->notificationRepository->save($notification, true);
 
-        if ($form->isSubmitted() && $form->isValid()) {
-            $notificationRepository->save($notification, true);
-
-            return $this->redirectToRoute('notification.index', [], Response::HTTP_SEE_OTHER);
+            return new JsonResponse(
+                $this->serializer->serialize($notification, 'json'),
+                Response::HTTP_OK
+            );
+        } catch (Exception $e) {
+            //@TODO: add loger
+            return new JsonResponse(
+                $e->getMessage(),
+                Response::HTTP_BAD_REQUEST
+            );
         }
-
-        return $this->renderForm('notification/edit.html.twig', [
-            'notification' => $notification,
-            'form' => $form,
-        ]);
     }
 
     #[Route('/{id}', name: 'notification.delete', methods: 'POST')]
-    public function delete(Request $request, Notification $notification, NotificationRepository $notificationRepository): Response
+    public function delete(Notification $notification): Response
     {
-        if ($this->isCsrfTokenValid('delete' . $notification->getId(), $request->request->get('_token'))) {
-            $notificationRepository->remove($notification, true);
-        }
+        try {
+            $this->notificationRepository->remove($notification, true);
 
-        return $this->redirectToRoute('notification.index', [], Response::HTTP_SEE_OTHER);
+            return new JsonResponse(
+                'Notification removed.',
+                Response::HTTP_NO_CONTENT
+            );
+        } catch (Exception $e) {
+            //@TODO: add loger
+            return new JsonResponse(
+                $e->getMessage(),
+                Response::HTTP_BAD_REQUEST
+            );
+        }
     }
 }
