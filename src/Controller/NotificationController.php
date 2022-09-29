@@ -80,42 +80,4 @@ class NotificationController extends AbstractController
             Response::HTTP_OK
         );
     }
-
-    #[Route('/{id}/edit', name: 'notification.edit', methods: 'POST')]
-    public function edit(Notification $notification): Response
-    {
-        try {
-            $this->notificationRepository->save($notification, true);
-
-            return new JsonResponse(
-                $this->serializer->serialize($notification, 'json'),
-                Response::HTTP_OK
-            );
-        } catch (Exception $e) {
-            //@TODO: add loger
-            return new JsonResponse(
-                $e->getMessage(),
-                Response::HTTP_BAD_REQUEST
-            );
-        }
-    }
-
-    #[Route('/{id}', name: 'notification.delete', methods: 'POST')]
-    public function delete(Notification $notification): Response
-    {
-        try {
-            $this->notificationRepository->remove($notification, true);
-
-            return new JsonResponse(
-                'Notification removed.',
-                Response::HTTP_NO_CONTENT
-            );
-        } catch (Exception $e) {
-            //@TODO: add loger
-            return new JsonResponse(
-                $e->getMessage(),
-                Response::HTTP_BAD_REQUEST
-            );
-        }
-    }
 }

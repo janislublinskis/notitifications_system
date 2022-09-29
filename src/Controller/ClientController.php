@@ -66,10 +66,27 @@ class ClientController extends AbstractController
         );
     }
 
-    #[Route('/{id}/edit', name: 'client.edit', methods: 'POST')]
-    public function edit(Client $client): JsonResponse
+    #[Route('/{id}/edit', name: 'client.edit', methods: 'PATCH')]
+    public function edit(Request $request, Client $client): JsonResponse
     {
         try {
+            $client = $this->clientRepository->find($client->getId());
+
+            if (!$client) {
+                throw $this->createNotFoundException(
+                    'No client found for id ' . $client->getId()
+                );
+            }
+
+            $data = $this->serializer->deserialize(
+                $request->getContent(), Client::class, 'json'
+            );
+
+            $client->setFirstName($data->getFirstName());
+            $client->setLastName($data->getLastName());
+            $client->setEmail($data->getEmail());
+            $client->setPhoneNumber($data->getPhoneNumber());
+
             $this->clientRepository->save($client, true);
 
             return new JsonResponse(
@@ -85,7 +102,7 @@ class ClientController extends AbstractController
         }
     }
 
-    #[Route('/{id}', name: 'client.delete', methods: 'POST')]
+    #[Route('/{id}', name: 'client.delete', methods: 'DELETE')]
     public function delete(Client $client): JsonResponse
     {
         try {
