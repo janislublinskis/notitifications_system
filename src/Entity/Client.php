@@ -4,6 +4,8 @@ namespace App\Entity;
 
 use ApiPlatform\Metadata\ApiResource;
 use App\Repository\ClientRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Serializer\Annotation\Groups;
@@ -51,11 +53,19 @@ class Client
     #[Groups(['client.read', 'client.write'])]
     private ?string $email = null;
 
-    #[ORM\Column(type: 'integer', length: 255)]
+    #[ORM\Column(type: 'bigint')]
     #[Assert\NotBlank]
     #[Assert\Length(min: 12)]
     #[Groups(['client.read', 'client.write'])]
     private ?int $phoneNumber = null;
+
+    #[ORM\OneToMany(mappedBy: 'clientId', targetEntity: Notification::class, orphanRemoval: true)]
+    private Collection $notifications;
+
+    public function __construct()
+    {
+        $this->notifications = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -100,12 +110,43 @@ class Client
 
     public function getPhoneNumber(): ?string
     {
-        return '+' . $this->phoneNumber;
+//        return '+' . $this->phoneNumber;
+        return $this->phoneNumber;
     }
 
     public function setPhoneNumber(string $phoneNumber): self
     {
         $this->phoneNumber = $phoneNumber;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Notification>
+     */
+    public function getNotifications(): Collection
+    {
+        return $this->notifications;
+    }
+
+    public function addNotification(Notification $notification): self
+    {
+        if (!$this->notifications->contains($notification)) {
+            $this->notifications->add($notification);
+            $notification->setClientId($this);
+        }
+
+        return $this;
+    }
+
+    public function removeNotification(Notification $notification): self
+    {
+        if ($this->notifications->removeElement($notification)) {
+            // set the owning side to null (unless already changed)
+            if ($notification->getClientId() === $this) {
+                $notification->setClientId(null);
+            }
+        }
 
         return $this;
     }
